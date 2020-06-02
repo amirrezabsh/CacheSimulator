@@ -14,6 +14,46 @@ public class CacheSimulator {
         String secondLine = sc.nextLine();
         // splitting second line to extract size of the cache(s).
         String[] secondLineSplit = secondLine.split(" - ");
+        // analyzing cache characteristics
+        // block size extraction.
+        String blockSize = firstLineSplit[0];
+        int blockSizeInInt = Integer.parseInt(blockSize);
+        // determining if the cache split or unified
+        Boolean splitOrUnified;
+        if (firstLineSplit[0].equals("0"))
+            splitOrUnified = false;
+        else
+            splitOrUnified = true;
+        // associativity extraction.
+        String associativity = firstLineSplit[2];
+        // determining if write policy is write-back or write-through.
+        Boolean backOrThrough;
+        if (firstLineSplit[3].equals("wb"))
+            backOrThrough = true;
+        else
+            backOrThrough = false;
+        // determining if allocation policy is write-allocation or no-write-allocation.
+        Boolean allocateOrNoAllocate;
+        if (firstLineSplit[4].equals("wa"))
+            allocateOrNoAllocate = true;
+        else
+            allocateOrNoAllocate = false;
+        // cache size extraction.
+        String ICacheSize;
+        int ICacheSizeInInt;
+        String DCacheSize;
+        int DCacheSizeInInt;
+        String cacheSize;
+        int cacheSizeInInt;
+        if (splitOrUnified) {
+            ICacheSize = secondLineSplit[0];
+            ICacheSizeInInt = Integer.parseInt(ICacheSize);
+            DCacheSize = secondLineSplit[1];
+            DCacheSizeInInt = Integer.parseInt(DCacheSize);
+        } else {
+            cacheSize = secondLineSplit[0];
+            cacheSizeInInt = Integer.parseInt(cacheSize);
+        }
         // extracting load and store instructions
         while (true) {
             String dataLine = sc.nextLine();
@@ -24,28 +64,11 @@ public class CacheSimulator {
             dataLine = dataLine.substring(0, 7);
             // splitting the line to read/store value and address value
             String[] dataSplit = dataLine.split(" ");
-
+            // converting address string in hexadecimal to decimal
+            int addressInInt = Integer.parseInt(dataSplit[1], 16);
         }
         // printing cache settings based on extracted data from first line and the second one.
         cacheSettingsPrint(firstLineSplit, secondLineSplit);
-        // analyzing cache characteristics
-        String blockSize = firstLineSplit[0];
-        Boolean splitOrUnified;
-        if (firstLineSplit[0].equals("0"))
-            splitOrUnified = false;
-        else
-            splitOrUnified = true;
-        String associativity = firstLineSplit[2];
-        Boolean backOrThrough ;
-        if (firstLineSplit[3].equals("wb"))
-            backOrThrough = true;
-        else
-            backOrThrough = false;
-        Boolean allocateOrNoAllocate;
-        if (firstLineSplit[4].equals("wa"))
-            allocateOrNoAllocate = true;
-        else
-            allocateOrNoAllocate = false;
     }
 
     public static void cacheSettingsPrint(String[] firstLineSplit, String[] secondLineSplit) {
