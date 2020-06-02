@@ -26,6 +26,7 @@ public class CacheSimulator {
             splitOrUnified = true;
         // associativity extraction.
         String associativity = firstLineSplit[2];
+        int associativityInInt = Integer.parseInt(associativity);
         // determining if write policy is write-back or write-through.
         Boolean backOrThrough;
         if (firstLineSplit[3].equals("wb"))
@@ -40,11 +41,11 @@ public class CacheSimulator {
             allocateOrNoAllocate = false;
         // cache size extraction.
         String ICacheSize;
-        int ICacheSizeInInt;
+        int ICacheSizeInInt = 0;
         String DCacheSize;
-        int DCacheSizeInInt;
+        int DCacheSizeInInt = 0;
         String cacheSize;
-        int cacheSizeInInt;
+        int cacheSizeInInt = 0;
         if (splitOrUnified) {
             ICacheSize = secondLineSplit[0];
             ICacheSizeInInt = Integer.parseInt(ICacheSize);
@@ -54,6 +55,15 @@ public class CacheSimulator {
             cacheSize = secondLineSplit[0];
             cacheSizeInInt = Integer.parseInt(cacheSize);
         }
+        // sets count calculation
+        int ICacheSetsCount = 0;
+        int DCacheSetsCount = 0;
+        int cacheSetsCount = 0;
+        if (splitOrUnified) {
+            ICacheSetsCount = (ICacheSizeInInt / blockSizeInInt) / associativityInInt;
+            DCacheSetsCount = (DCacheSizeInInt / blockSizeInInt) / associativityInInt;
+        } else
+            cacheSetsCount = (cacheSizeInInt / blockSizeInInt) / associativityInInt;
         // extracting load and store instructions
         while (true) {
             String dataLine = sc.nextLine();
