@@ -1,5 +1,3 @@
-import javax.swing.*;
-import java.lang.reflect.Array;
 import java.util.*;
 
 public class CacheSimulator {
@@ -76,8 +74,11 @@ public class CacheSimulator {
         int demandFetch = 0;
         int dataAccesses = 0;
         int instructionAccesses = 0;
-        int dataReplace=0;
-        int instructionReplace=0;
+        int dataReplace = 0;
+        int instructionReplace = 0;
+        Details dataDetails = new Details(dataHitCount,dataMissCount,dataAccesses,dataReplace);
+        Details instructionDetails = new Details(instructionHitCount,instructionMissCount,instructionAccesses,instructionReplace);
+        PublicDetails publicDetails = new PublicDetails(copiesBack,demandFetch);
         if (splitOrUnified) {
             for (int i = 0; i < ICacheSetsCount; i++) {
                 ICache.add(new PriorityQueue<>());
@@ -101,23 +102,23 @@ public class CacheSimulator {
             // splitting the line to read/store value and address value
             String[] dataSplit = dataLine.split(" ");
             if (dataSplit[0].equals("0") && !splitOrUnified) {
-                read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount, dataHitCount, dataMissCount, associativityInInt, demandFetch, dirtyBlocks, copiesBack);
+                read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount, associativityInInt,  dirtyBlocks, dataDetails,publicDetails);
                 dataAccesses++;
             }
 
             if (dataSplit[0].equals("1") && backOrThrough) {
-                writeBack(dataSplit[1], cache, cacheSetsCount, dataHitCount, dataMissCount, associativityInInt, allocateOrNoAllocate, blockSizeInInt, dirtyBlocks, copiesBack, demandFetch);
+                writeBack(dataSplit[1], cache, cacheSetsCount,  associativityInInt, allocateOrNoAllocate, blockSizeInInt, dirtyBlocks, dataDetails,publicDetails);
                 dataAccesses++;
             }
             if (dataSplit[0].equals("2") && !splitOrUnified) {
-                read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount, instructionHitCount, instructionMissCount, associativityInInt, demandFetch, dirtyBlocks, copiesBack);
+                read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount,  associativityInInt,  dirtyBlocks, instructionDetails,publicDetails);
                 instructionAccesses++;
             }
         }
         // printing cache settings based on extracted data from first line and the second one.
         cacheSettingsPrint(firstLineSplit, secondLineSplit);
         emptyCache(cache, dirtyBlocks, copiesBack);
-        printResult(copiesBack, demandFetch, dataHitCount, dataMissCount, splitOrUnified, dataAccesses, instructionHitCount, instructionMissCount,instructionAccesses,dataReplace,instructionReplace);
+        printResult( splitOrUnified,dataDetails,instructionDetails,publicDetails );
     }
 
     public static void cacheSettingsPrint(String[] firstLineSplit, String[] secondLineSplit) {
@@ -148,31 +149,33 @@ public class CacheSimulator {
             System.out.println("Allocation policy: WRITE ALLOCATE");
         else
             System.out.println("Allocation policy: WRITE NO ALLOCATE");
+        System.out.println();
     }
 
-    public static void read(String dataAddress, ArrayList<Queue<String>> cache, int blockSize, int cacheSetsCount, int hitCount, int missCount, int Associativity, int demandFetch, ArrayList<String> dirtyBlocks, int copiesBack) {
+    public static void read(String dataAddress, ArrayList<Queue<String>> cache, int blockSize, int cacheSetsCount,  int associativity,  ArrayList<String> dirtyBlocks, Details details,PublicDetails publicDetails) {
         // converting address string in hexadecimal to decimal
         int addressInInt = Integer.parseInt(dataAddress, 16);
         addressInInt = addressInInt / blockSize;
         addressInInt = addressInInt % cacheSetsCount;
-
         if (cache.get(addressInInt).contains(dataAddress))
-            hitCount++;
+            details.setHits(details.getHits()+1);
 
         else {
-            missCount++;
-            demandFetch++;
+            details.setMisses(details.getMisses()+1);
+            publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
+            if (cache.get(addressInInt).size() == associativity)
+                details.setReplace(details.getReplace()+1);
         }
         cache.get(addressInInt).add(dataAddress);
-        if (cache.get(addressInInt).size() > Associativity)
+        if (cache.get(addressInInt).size() > associativity)
             if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
                 dirtyBlocks.remove(cache.get(addressInInt).peek());
-                copiesBack += 4;
+                publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
             }
         cache.get(addressInInt).remove();
     }
 
-    public static void writeBack(String dataAddress, ArrayList<Queue<String>> cache, int cacheSetsCount, int hitCount, int missCount, int associativity, Boolean allocateOrNoAllocate, int blockSize, ArrayList<String> dirtyBlocks, int copiesBack, int demandFetch) {
+    public static void writeBack(String dataAddress, ArrayList<Queue<String>> cache, int cacheSetsCount, int associativity, Boolean allocateOrNoAllocate, int blockSize, ArrayList<String> dirtyBlocks, Details details,PublicDetails publicDetails) {
         int addressInInt = Integer.parseInt(dataAddress, 16);
         addressInInt = addressInInt / blockSize;
         addressInInt = addressInInt % cacheSetsCount;
@@ -186,10 +189,10 @@ public class CacheSimulator {
                 cache.get(addressInInt).add(dataAddress);
                 if (cache.get(addressInInt).size() > associativity)
                     cache.get(addressInInt).remove();
-                copiesBack++;
-                demandFetch++;
+                publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
+                publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
             } else {
-                copiesBack++;
+                publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
             }
         }
     }
@@ -205,26 +208,114 @@ public class CacheSimulator {
         }
     }
 
-    public static void printResult(int copiesBack, int demandFetch, int dataHitCount, int dataMissCount, Boolean splitOrUnified, int dataAccesses, int instructionHitCount, int instructionMissCount, int instructionAccesses, int dataReplace, int instructionReplace) {
+    public static void printResult( Boolean splitOrUnified, Details dataDetails,Details instructionDetails,PublicDetails publicDetails) {
         System.out.println("***CACHE STATISTICS***");
         System.out.println("INSTRUCTIONS");
-        float instructionMissRate = instructionMissCount / (instructionMissCount + instructionHitCount);
-        float instructionHitRate = 1 - instructionMissRate;
-        float dataMissRate = dataMissCount / (dataMissCount + dataHitCount);
-        float dataHitRate = 1 - dataMissRate;
+        double instructionMissRate = 0;
+        if (instructionDetails.getMisses() == 0)
+            instructionMissRate = 0.0000;
+        else
+            instructionMissRate = instructionDetails.getMisses() / (instructionDetails.getMisses() + instructionDetails.getHits());
+        double instructionHitRate = 0;
+        if (instructionDetails.getHits() == 0)
+            instructionHitRate = 0.0000;
+        else
+            instructionHitRate = 1 - instructionMissRate;
+        double dataMissRate = 0;
+        if (dataDetails.getMisses() == 0)
+            dataMissRate = 0.0000;
+        else
+            dataMissRate = dataDetails.getMisses()/ (dataDetails.getMisses() + dataDetails.getHits());
+        double dataHitRate = 0;
+        if (dataDetails.getHits() == 0)
+            dataHitRate = 0.0000;
+        else
+            dataHitRate = 1 - dataMissRate;
         if (!splitOrUnified) {
-            System.out.println("accesses: " + instructionAccesses);
-            System.out.println("misses: " + instructionMissCount);
+            System.out.println("accesses: " + instructionDetails.getAccesses());
+            System.out.println("misses: " + instructionDetails.getMisses());
             System.out.println("miss rate: " + instructionMissRate + " (hit rate " + instructionHitRate + ")");
-            System.out.println("replace: " + instructionReplace);
+            System.out.println("replace: " + instructionDetails.getReplace());
             System.out.println("DATA");
-            System.out.println("accesses: " + dataAccesses);
-            System.out.println("misses: " + dataMissCount);
+            System.out.println("accesses: " + dataDetails.getAccesses());
+            System.out.println("misses: " + dataDetails.getMisses());
             System.out.println("miss rate: " + dataMissRate + " (hit rate " + dataHitRate + ")");
-            System.out.println("replace: " + dataReplace);
+            System.out.println("replace: " + dataDetails.getReplace());
             System.out.println("TRAFFIC (in words)");
-            System.out.println("demand fetch: " + demandFetch);
-            System.out.println("copies back: " + copiesBack);
+            System.out.println("demand fetch: " + publicDetails.getDemandFetch());
+            System.out.println("copies back: " + publicDetails.getCopiesBack());
+        }
+    }
+    static class Details{
+        int hits;
+        int misses;
+        int accesses;
+        int replace;
+
+        public Details(int hits, int misses, int accesses, int replace) {
+            this.hits = hits;
+            this.misses = misses;
+            this.accesses = accesses;
+            this.replace = replace;
+        }
+
+        public void setHits(int hits) {
+            this.hits = hits;
+        }
+
+        public void setMisses(int misses) {
+            this.misses = misses;
+        }
+
+        public void setAccesses(int accesses) {
+            this.accesses = accesses;
+        }
+
+
+        public void setReplace(int replace) {
+            this.replace = replace;
+        }
+
+        public int getHits() {
+            return hits;
+        }
+
+        public int getMisses() {
+            return misses;
+        }
+
+        public int getAccesses() {
+            return accesses;
+        }
+
+
+        public int getReplace() {
+            return replace;
+        }
+    }
+    static class PublicDetails {
+        int copiesBack;
+        int demandFetch;
+
+        public PublicDetails(int copiesBack, int demandFetch) {
+            this.copiesBack = copiesBack;
+            this.demandFetch = demandFetch;
+        }
+
+        public int getCopiesBack() {
+            return copiesBack;
+        }
+
+        public int getDemandFetch() {
+            return demandFetch;
+        }
+
+        public void setCopiesBack(int copiesBack) {
+            this.copiesBack = copiesBack;
+        }
+
+        public void setDemandFetch(int demandFetch) {
+            this.demandFetch = demandFetch;
         }
     }
 }
