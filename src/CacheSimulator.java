@@ -223,8 +223,10 @@ public class CacheSimulator {
                 }else
                     cache.get(addressInInt).remove();
         } else {
-            if (!cache.get(addressInInt).contains(dataAddress))
+            if (!cache.get(addressInInt).contains(dataAddress)){
                 publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
+                details.setMisses(details.getMisses()+1);
+            }
         }
         details.setAccesses(details.getAccesses() + 1);
     }
@@ -249,7 +251,7 @@ public class CacheSimulator {
         if (instructionDetails.getMisses() == 0)
             instructionMissRate = 0.0000;
         else
-            instructionMissRate = (float) instructionDetails.getMisses() / (float) (instructionDetails.getMisses() + instructionDetails.getHits());
+            instructionMissRate = (float) instructionDetails.getMisses() / (float) instructionDetails.getAccesses();
         String instructionMissRateString = String.format("%.4f", instructionMissRate);
         double instructionHitRate = 0;
         if (instructionDetails.getHits() == 0)
@@ -261,7 +263,7 @@ public class CacheSimulator {
         if (dataDetails.getMisses() == 0)
             dataMissRate = 0.0000;
         else
-            dataMissRate = (float) dataDetails.getMisses() / (float) (dataDetails.getMisses() + dataDetails.getHits());
+            dataMissRate = (float) dataDetails.getMisses() / (float) dataDetails.getAccesses();
         String dataMissRateString = String.format("%.4f", dataMissRate);
         double dataHitRate = 0;
         if (dataDetails.getHits() == 0)
