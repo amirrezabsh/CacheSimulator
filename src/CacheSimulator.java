@@ -115,7 +115,7 @@ public class CacheSimulator {
         // printing cache settings based on extracted data from first line and the second one.
         cacheSettingsPrint(firstLineSplit, secondLineSplit);
         emptyCache(cache, dirtyBlocks, publicDetails);
-        printResult(splitOrUnified, dataDetails, instructionDetails, publicDetails);
+        printResult(splitOrUnified, dataDetails, instructionDetails, publicDetails,blockSizeInInt);
     }
 
     public static void cacheSettingsPrint(String[] firstLineSplit, String[] secondLineSplit) {
@@ -153,6 +153,7 @@ public class CacheSimulator {
         // converting address string in hexadecimal to decimal
         int addressInInt = Integer.parseInt(dataAddress, 16);
         addressInInt = addressInInt / blockSize;
+        dataAddress =""+ addressInInt;
         addressInInt = addressInInt % cacheSetsCount;
         if (cache.get(addressInInt).contains(dataAddress))
             details.setHits(details.getHits() + 1);
@@ -167,6 +168,7 @@ public class CacheSimulator {
             if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
                 dirtyBlocks.remove(cache.get(addressInInt).peek());
                 publicDetails.setCopiesBack(publicDetails.getCopiesBack() + 4);
+                publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
             }
             cache.get(addressInInt).remove();
         }
@@ -202,14 +204,16 @@ public class CacheSimulator {
                 if (dirtyBlocks.contains(cache.get(i).peek())) {
                     dirtyBlocks.remove(cache.get(i).poll());
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
+                    publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
                 }
             }
         }
     }
 
-    public static void printResult(Boolean splitOrUnified, Details dataDetails, Details instructionDetails, PublicDetails publicDetails) {
+    public static void printResult(Boolean splitOrUnified, Details dataDetails, Details instructionDetails, PublicDetails publicDetails,int blockSize) {
         System.out.println("***CACHE STATISTICS***");
         System.out.println("INSTRUCTIONS");
+        publicDetails.setDemandFetch(publicDetails.getDemandFetch()*(blockSize/4));
         double instructionMissRate = 0;
         if (instructionDetails.getMisses() == 0)
             instructionMissRate = 0.0000;
