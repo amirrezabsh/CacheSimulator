@@ -98,7 +98,7 @@ public class CacheSimulator {
             if (dataLine.length() <= 1)
                 break;
             // ignoring extra part of the line
-            dataLine = dataLine.substring(0, 7);
+            dataLine = dataLine.substring(0, 15);
             // splitting the line to read/store value and address value
             String[] dataSplit = dataLine.split(" ");
             if (dataSplit[0].equals("0") && !splitOrUnified) {
