@@ -115,7 +115,7 @@ public class CacheSimulator {
         // printing cache settings based on extracted data from first line and the second one.
         cacheSettingsPrint(firstLineSplit, secondLineSplit);
         emptyCache(cache, dirtyBlocks, publicDetails);
-        printResult(splitOrUnified, dataDetails, instructionDetails, publicDetails,blockSizeInInt);
+        printResult(splitOrUnified, dataDetails, instructionDetails, publicDetails, blockSizeInInt);
     }
 
     public static void cacheSettingsPrint(String[] firstLineSplit, String[] secondLineSplit) {
@@ -153,24 +153,34 @@ public class CacheSimulator {
         // converting address string in hexadecimal to decimal
         int addressInInt = Integer.parseInt(dataAddress, 16);
         addressInInt = addressInInt / blockSize;
-        dataAddress =""+ addressInInt;
+        dataAddress = "" + addressInInt;
         addressInInt = addressInInt % cacheSetsCount;
-        if (cache.get(addressInInt).contains(dataAddress))
-            details.setHits(details.getHits() + 1);
-        else {
-            details.setMisses(details.getMisses() + 1);
-            publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
-            if (cache.get(addressInInt).size() == associativity)
-                details.setReplace(details.getReplace() + 1);
-        }
-        cache.get(addressInInt).add(dataAddress);
-        if (cache.get(addressInInt).size() > associativity){
-            if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
-                dirtyBlocks.remove(cache.get(addressInInt).peek());
-                publicDetails.setCopiesBack(publicDetails.getCopiesBack() + 4);
-                publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
+        if (cache.get(addressInInt).contains(dataAddress)) {
+            Queue<String> tmp = new PriorityQueue<>();
+            while (!cache.get(addressInInt).peek().equals(dataAddress)) {
+                tmp.add(cache.get(addressInInt).poll());
             }
             cache.get(addressInInt).remove();
+            cache.get(addressInInt).add(dataAddress);
+            while (!cache.get(addressInInt).isEmpty()) {
+                tmp.add(cache.get(addressInInt).poll());
+            }
+            while (!tmp.isEmpty())
+                cache.get(addressInInt).add(tmp.poll());
+            details.setHits(details.getHits() + 1);
+        } else {
+            details.setMisses(details.getMisses() + 1);
+            publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
+            cache.get(addressInInt).add(dataAddress);
+            if (cache.get(addressInInt).size()>associativity){
+                if (dirtyBlocks.contains(cache.get(addressInInt).peek())){
+                    publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
+                    dirtyBlocks.remove(cache.get(addressInInt).poll());
+                }
+                else
+                    cache.get(addressInInt).poll();
+
+            }
         }
         details.setAccesses(details.getAccesses() + 1);
     }
@@ -178,22 +188,40 @@ public class CacheSimulator {
     public static void writeBack(String dataAddress, ArrayList<Queue<String>> cache, int cacheSetsCount, int associativity, Boolean allocateOrNoAllocate, int blockSize, ArrayList<String> dirtyBlocks, Details details, PublicDetails publicDetails) {
         int addressInInt = Integer.parseInt(dataAddress, 16);
         addressInInt = addressInInt / blockSize;
+        dataAddress = "" + addressInInt;
         addressInInt = addressInInt % cacheSetsCount;
-        try {
+        if (cache.get(addressInInt).contains(dataAddress)) {
+            if (!dirtyBlocks.contains(dataAddress))
+                dirtyBlocks.add(dataAddress);
+            details.setHits(details.getHits() + 1);
+        }
+        if (allocateOrNoAllocate) {
             if (cache.get(addressInInt).contains(dataAddress)) {
-                if (!dirtyBlocks.contains(dataAddress))
-                    dirtyBlocks.add(dataAddress);
+                Queue<String> tmp = new PriorityQueue<>();
+                while (!cache.get(addressInInt).peek().equals(dataAddress)) {
+                    tmp.add(cache.get(addressInInt).poll());
+                }
+                cache.get(addressInInt).remove();
+                while (!cache.get(addressInInt).isEmpty()) {
+                    tmp.add(cache.get(addressInInt).poll());
+                }
+                while (!tmp.isEmpty())
+                    cache.get(addressInInt).add(tmp.poll());
             }
-        } catch (NullPointerException e) {
-            if (allocateOrNoAllocate) {
-                cache.get(addressInInt).add(dataAddress);
-                if (cache.get(addressInInt).size() > associativity)
+            else {
+                publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
+                publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
+            }
+            cache.get(addressInInt).add(dataAddress);
+            if (cache.get(addressInInt).size() > associativity)
+                if (dirtyBlocks.contains(cache.get(addressInInt).peek())){
+                    publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
+                    dirtyBlocks.remove(cache.get(addressInInt).poll());
+                }else
                     cache.get(addressInInt).remove();
-                publicDetails.setCopiesBack(publicDetails.getCopiesBack() + 1);
-                publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
-            } else {
-                publicDetails.setCopiesBack(publicDetails.getCopiesBack() + 1);
-            }
+        } else {
+            if (!cache.get(addressInInt).contains(dataAddress))
+                publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
         }
         details.setAccesses(details.getAccesses() + 1);
     }
@@ -203,41 +231,41 @@ public class CacheSimulator {
             while (dirtyBlocks.size() != 0) {
                 if (dirtyBlocks.contains(cache.get(i).peek())) {
                     dirtyBlocks.remove(cache.get(i).poll());
-                    publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
-                    publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
+                    publicDetails.setCopiesBack(publicDetails.getCopiesBack() + 4);
+                    publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
                 }
             }
         }
     }
 
-    public static void printResult(Boolean splitOrUnified, Details dataDetails, Details instructionDetails, PublicDetails publicDetails,int blockSize) {
+    public static void printResult(Boolean splitOrUnified, Details dataDetails, Details instructionDetails, PublicDetails publicDetails, int blockSize) {
         System.out.println("***CACHE STATISTICS***");
         System.out.println("INSTRUCTIONS");
-        publicDetails.setDemandFetch(publicDetails.getDemandFetch()*(blockSize/4));
+        publicDetails.setDemandFetch(publicDetails.getDemandFetch() * (blockSize / 4));
         double instructionMissRate = 0;
         if (instructionDetails.getMisses() == 0)
             instructionMissRate = 0.0000;
         else
-            instructionMissRate = (float)instructionDetails.getMisses() / (float)(instructionDetails.getMisses() + instructionDetails.getHits());
-        String instructionMissRateString = String.format("%.4f",instructionMissRate);
+            instructionMissRate = (float) instructionDetails.getMisses() / (float) (instructionDetails.getMisses() + instructionDetails.getHits());
+        String instructionMissRateString = String.format("%.4f", instructionMissRate);
         double instructionHitRate = 0;
         if (instructionDetails.getHits() == 0)
             instructionHitRate = 0.0000;
         else
             instructionHitRate = 1 - instructionMissRate;
-        String instructionHitRateString = String.format("%.4f",instructionHitRate);
+        String instructionHitRateString = String.format("%.4f", instructionHitRate);
         double dataMissRate = 0;
         if (dataDetails.getMisses() == 0)
             dataMissRate = 0.0000;
         else
-            dataMissRate = (float)dataDetails.getMisses() /( float) (dataDetails.getMisses() + dataDetails.getHits());
-        String dataMissRateString = String.format("%.4f",dataMissRate);
+            dataMissRate = (float) dataDetails.getMisses() / (float) (dataDetails.getMisses() + dataDetails.getHits());
+        String dataMissRateString = String.format("%.4f", dataMissRate);
         double dataHitRate = 0;
         if (dataDetails.getHits() == 0)
             dataHitRate = 0.0000;
         else
             dataHitRate = 1 - dataMissRate;
-        String dataHitRateString = String.format("%.4f",dataHitRate);
+        String dataHitRateString = String.format("%.4f", dataHitRate);
         if (!splitOrUnified) {
             System.out.println("accesses: " + instructionDetails.getAccesses());
             System.out.println("misses: " + instructionDetails.getMisses());
