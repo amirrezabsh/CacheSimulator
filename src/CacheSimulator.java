@@ -173,6 +173,7 @@ public class CacheSimulator {
             publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
             cache.get(addressInInt).add(dataAddress);
             if (cache.get(addressInInt).size()>associativity){
+                details.setReplace(details.getReplace()+1);
                 if (dirtyBlocks.contains(cache.get(addressInInt).peek())){
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
                     dirtyBlocks.remove(cache.get(addressInInt).poll());
@@ -213,10 +214,12 @@ public class CacheSimulator {
                 publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
             }
             cache.get(addressInInt).add(dataAddress);
-            if (cache.get(addressInInt).size() > associativity)
+            if (cache.get(addressInInt).size() > associativity){
+                details.setReplace(details.getReplace()+1);
                 if (dirtyBlocks.contains(cache.get(addressInInt).peek())){
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
                     dirtyBlocks.remove(cache.get(addressInInt).poll());
+                }
                 }else
                     cache.get(addressInInt).remove();
         } else {
