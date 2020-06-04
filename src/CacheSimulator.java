@@ -177,8 +177,7 @@ public class CacheSimulator {
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack() + (blockSize / 4));
                     dirtyBlocks.remove(cache.get(addressInInt).poll());
                 } else
-                    cache.get(addressInInt).poll();
-
+                    cache.get(addressInInt).remove();
             }
         }
         details.setAccesses(details.getAccesses() + 1);
