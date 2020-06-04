@@ -155,9 +155,7 @@ public class CacheSimulator {
         addressInInt = addressInInt / blockSize;
         dataAddress = "" + addressInInt;
         addressInInt = addressInInt % cacheSetsCount;
-        System.out.println(counter + ".read: " + dataAddress + "/" + addressInInt);
         if (cache.get(addressInInt).contains(dataAddress)) {
-            System.out.println("Hit");
                 Queue<String> tmp = new PriorityQueue<>();
                 while (!cache.get(addressInInt).peek().equals(dataAddress)) {
                     tmp.add(cache.get(addressInInt).poll());
@@ -172,12 +170,10 @@ public class CacheSimulator {
 
             details.setHits(details.getHits() + 1);
         } else {
-            System.out.println("Miss");
             details.setMisses(details.getMisses() + 1);
             publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
             cache.get(addressInInt).add(dataAddress);
             if (cache.get(addressInInt).size() > associativity) {
-                System.out.println("replaced with: " + cache.get(addressInInt).peek());
                 details.setReplace(details.getReplace() + 1);
                 if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack() + (blockSize / 4));
@@ -196,9 +192,7 @@ public class CacheSimulator {
         addressInInt = addressInInt / blockSize;
         dataAddress = "" + addressInInt;
         addressInInt = addressInInt % cacheSetsCount;
-        System.out.println(counter + ".write: " + dataAddress + "/" + addressInInt);
         if (cache.get(addressInInt).contains(dataAddress)) {
-            System.out.println("Hit");
             if (!dirtyBlocks.contains(dataAddress))
                 dirtyBlocks.add(dataAddress);
             details.setHits(details.getHits() + 1);
@@ -217,7 +211,6 @@ public class CacheSimulator {
                         cache.get(addressInInt).add(tmp.poll());
 
             } else {
-                System.out.println("Miss");
                 details.setMisses(details.getMisses() + 1);
                 publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
                 if (!dirtyBlocks.contains(dataAddress))
@@ -225,7 +218,6 @@ public class CacheSimulator {
             }
             cache.get(addressInInt).add(dataAddress);
             if (cache.get(addressInInt).size() > associativity) {
-                System.out.println("replaced with: " + cache.get(addressInInt).peek());
                 details.setReplace(details.getReplace() + 1);
                 if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack() + (blockSize / 4));
