@@ -2,6 +2,7 @@ import java.util.*;
 
 public class CacheSimulator {
     public static void main(String[] args) {
+        int counter = 0;
         Scanner sc = new Scanner(System.in);
         // reading first line of input.
         String firstLine = sc.nextLine();
@@ -97,8 +98,6 @@ public class CacheSimulator {
             // check when we reach the second '\n'
             if (dataLine.length() <= 1)
                 break;
-            // ignoring extra part of the line
-            dataLine = dataLine.substring(0, 15);
             // splitting the line to read/store value and address value
             String[] dataSplit = dataLine.split(" ");
             if (dataSplit[0].equals("0") && !splitOrUnified) {
@@ -114,7 +113,7 @@ public class CacheSimulator {
         }
         // printing cache settings based on extracted data from first line and the second one.
         cacheSettingsPrint(firstLineSplit, secondLineSplit);
-        emptyCache(cache, dirtyBlocks, publicDetails);
+        emptyCache(cache, dirtyBlocks, publicDetails, blockSizeInInt);
         printResult(splitOrUnified, dataDetails, instructionDetails, publicDetails, blockSizeInInt);
     }
 
@@ -172,13 +171,12 @@ public class CacheSimulator {
             details.setMisses(details.getMisses() + 1);
             publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
             cache.get(addressInInt).add(dataAddress);
-            if (cache.get(addressInInt).size()>associativity){
-                details.setReplace(details.getReplace()+1);
-                if (dirtyBlocks.contains(cache.get(addressInInt).peek())){
-                    publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
+            if (cache.get(addressInInt).size() > associativity) {
+                details.setReplace(details.getReplace() + 1);
+                if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
+                    publicDetails.setCopiesBack(publicDetails.getCopiesBack() + (blockSize / 4));
                     dirtyBlocks.remove(cache.get(addressInInt).poll());
-                }
-                else
+                } else
                     cache.get(addressInInt).poll();
 
             }
@@ -208,42 +206,36 @@ public class CacheSimulator {
                 }
                 while (!tmp.isEmpty())
                     cache.get(addressInInt).add(tmp.poll());
-            }
-            else {
-                publicDetails.setDemandFetch(publicDetails.getDemandFetch()+1);
-                publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
+            } else {
+                details.setMisses(details.getMisses() + 1);
+                publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
+                dirtyBlocks.add(dataAddress);
             }
             cache.get(addressInInt).add(dataAddress);
-            if (cache.get(addressInInt).size() > associativity){
-                details.setReplace(details.getReplace()+1);
-                if (dirtyBlocks.contains(cache.get(addressInInt).peek())){
-                    publicDetails.setCopiesBack(publicDetails.getCopiesBack()+4);
+            if (cache.get(addressInInt).size() > associativity) {
+                details.setReplace(details.getReplace() + 1);
+                if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
+                    publicDetails.setCopiesBack(publicDetails.getCopiesBack() + (blockSize / 4));
                     dirtyBlocks.remove(cache.get(addressInInt).poll());
-                }
-                }else
+                } else
                     cache.get(addressInInt).remove();
+            }
         } else {
-            if (!cache.get(addressInInt).contains(dataAddress)){
-                publicDetails.setCopiesBack(publicDetails.getCopiesBack()+1);
-                details.setMisses(details.getMisses()+1);
+            if (!cache.get(addressInInt).contains(dataAddress)) {
+                publicDetails.setCopiesBack(publicDetails.getCopiesBack() + 1);
+                details.setMisses(details.getMisses() + 1);
             }
         }
         details.setAccesses(details.getAccesses() + 1);
+
     }
 
-    public static void emptyCache(ArrayList<Queue<String>> cache, ArrayList<String> dirtyBlocks, PublicDetails publicDetails) {
-        for (int i = 0; i < cache.size(); i++) {
-            while (dirtyBlocks.size() != 0) {
-                if (dirtyBlocks.contains(cache.get(i).peek())) {
-                    dirtyBlocks.remove(cache.get(i).poll());
-                    publicDetails.setCopiesBack(publicDetails.getCopiesBack() + 4);
-                    publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
-                }
-            }
-        }
+    public static void emptyCache(ArrayList<Queue<String>> cache, ArrayList<String> dirtyBlocks, PublicDetails publicDetails, int blockSize) {
+        publicDetails.setCopiesBack(publicDetails.getCopiesBack() + dirtyBlocks.size() * (blockSize / 4));
     }
 
-    public static void printResult(Boolean splitOrUnified, Details dataDetails, Details instructionDetails, PublicDetails publicDetails, int blockSize) {
+    public static void printResult(Boolean splitOrUnified, Details dataDetails, Details
+            instructionDetails, PublicDetails publicDetails, int blockSize) {
         System.out.println("***CACHE STATISTICS***");
         System.out.println("INSTRUCTIONS");
         publicDetails.setDemandFetch(publicDetails.getDemandFetch() * (blockSize / 4));
@@ -283,7 +275,7 @@ public class CacheSimulator {
             System.out.println("replace: " + dataDetails.getReplace());
             System.out.println("TRAFFIC (in words)");
             System.out.println("demand fetch: " + publicDetails.getDemandFetch());
-            System.out.println("copies back: " + publicDetails.getCopiesBack());
+            System.out.print("copies back: " + publicDetails.getCopiesBack());
         }
     }
 
