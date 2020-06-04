@@ -158,7 +158,6 @@ public class CacheSimulator {
         System.out.println(counter + ".read: " + dataAddress + "/" + addressInInt);
         if (cache.get(addressInInt).contains(dataAddress)) {
             System.out.println("Hit");
-            if (associativity != 1) {
                 Queue<String> tmp = new PriorityQueue<>();
                 while (!cache.get(addressInInt).peek().equals(dataAddress)) {
                     tmp.add(cache.get(addressInInt).poll());
@@ -170,7 +169,7 @@ public class CacheSimulator {
                 }
                 while (!tmp.isEmpty())
                     cache.get(addressInInt).add(tmp.poll());
-            }
+
             details.setHits(details.getHits() + 1);
         } else {
             System.out.println("Miss");
@@ -206,7 +205,6 @@ public class CacheSimulator {
         }
         if (allocateOrNoAllocate) {
             if (cache.get(addressInInt).contains(dataAddress)) {
-                if (associativity != 1) {
                     Queue<String> tmp = new PriorityQueue<>();
                     while (!cache.get(addressInInt).peek().equals(dataAddress)) {
                         tmp.add(cache.get(addressInInt).poll());
@@ -217,7 +215,7 @@ public class CacheSimulator {
                     }
                     while (!tmp.isEmpty())
                         cache.get(addressInInt).add(tmp.poll());
-                }
+
             } else {
                 System.out.println("Miss");
                 details.setMisses(details.getMisses() + 1);
