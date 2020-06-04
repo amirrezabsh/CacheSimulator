@@ -63,9 +63,9 @@ public class CacheSimulator {
         } else
             cacheSetsCount = (cacheSizeInInt / blockSizeInInt) / associativityInInt;
         // creating cache.
-        ArrayList<Queue<String>> ICache = new ArrayList<>(ICacheSetsCount);
-        ArrayList<Queue<String>> DCache = new ArrayList<>(DCacheSetsCount);
-        ArrayList<Queue<String>> cache = new ArrayList<>(cacheSetsCount);
+        ArrayList<Queue<String>> ICache = new ArrayList<>();
+        ArrayList<Queue<String>> DCache = new ArrayList<>();
+        ArrayList<Queue<String>> cache = new ArrayList<>();
         ArrayList<String> dirtyBlocks = new ArrayList<>();
         int dataHitCount = 0;
         int dataMissCount = 0;
@@ -82,14 +82,14 @@ public class CacheSimulator {
         PublicDetails publicDetails = new PublicDetails(copiesBack, demandFetch);
         if (splitOrUnified) {
             for (int i = 0; i < ICacheSetsCount; i++) {
-                ICache.add(new PriorityQueue<>());
+                ICache.add(new LinkedList<>());
             }
             for (int i = 0; i < DCacheSetsCount; i++) {
-                DCache.add(new PriorityQueue<>());
+                DCache.add(new LinkedList<>());
             }
         } else {
             for (int i = 0; i < cacheSetsCount; i++) {
-                cache.add(new PriorityQueue<>());
+                cache.add(new LinkedList<>());
             }
         }
         // extracting load and store instructions
@@ -101,14 +101,14 @@ public class CacheSimulator {
             // splitting the line to read/store value and address value
             String[] dataSplit = dataLine.split(" ");
             if (dataSplit[0].equals("0") && !splitOrUnified) {
-                read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount, associativityInInt, dirtyBlocks, dataDetails, publicDetails);
+                counter = read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount, associativityInInt, dirtyBlocks, dataDetails, publicDetails, counter);
             }
 
             if (dataSplit[0].equals("1") && backOrThrough) {
-                writeBack(dataSplit[1], cache, cacheSetsCount, associativityInInt, allocateOrNoAllocate, blockSizeInInt, dirtyBlocks, dataDetails, publicDetails);
+                counter = writeBack(dataSplit[1], cache, cacheSetsCount, associativityInInt, allocateOrNoAllocate, blockSizeInInt, dirtyBlocks, dataDetails, publicDetails, counter);
             }
             if (dataSplit[0].equals("2") && !splitOrUnified) {
-                read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount, associativityInInt, dirtyBlocks, instructionDetails, publicDetails);
+                counter = read(dataSplit[1], cache, blockSizeInInt, cacheSetsCount, associativityInInt, dirtyBlocks, instructionDetails, publicDetails, counter);
             }
         }
         // printing cache settings based on extracted data from first line and the second one.
@@ -148,30 +148,37 @@ public class CacheSimulator {
         System.out.println();
     }
 
-    public static void read(String dataAddress, ArrayList<Queue<String>> cache, int blockSize, int cacheSetsCount, int associativity, ArrayList<String> dirtyBlocks, Details details, PublicDetails publicDetails) {
+    public static int read(String dataAddress, ArrayList<Queue<String>> cache, int blockSize, int cacheSetsCount, int associativity, ArrayList<String> dirtyBlocks, Details details, PublicDetails publicDetails, int counter) {
         // converting address string in hexadecimal to decimal
+        counter++;
         int addressInInt = Integer.parseInt(dataAddress, 16);
         addressInInt = addressInInt / blockSize;
         dataAddress = "" + addressInInt;
         addressInInt = addressInInt % cacheSetsCount;
+        System.out.println(counter + ".read: " + dataAddress + "/" + addressInInt);
         if (cache.get(addressInInt).contains(dataAddress)) {
-            Queue<String> tmp = new PriorityQueue<>();
-            while (!cache.get(addressInInt).peek().equals(dataAddress)) {
-                tmp.add(cache.get(addressInInt).poll());
+            System.out.println("Hit");
+            if (associativity != 1) {
+                Queue<String> tmp = new PriorityQueue<>();
+                while (!cache.get(addressInInt).peek().equals(dataAddress)) {
+                    tmp.add(cache.get(addressInInt).poll());
+                }
+                cache.get(addressInInt).remove();
+                cache.get(addressInInt).add(dataAddress);
+                while (!cache.get(addressInInt).isEmpty()) {
+                    tmp.add(cache.get(addressInInt).poll());
+                }
+                while (!tmp.isEmpty())
+                    cache.get(addressInInt).add(tmp.poll());
             }
-            cache.get(addressInInt).remove();
-            cache.get(addressInInt).add(dataAddress);
-            while (!cache.get(addressInInt).isEmpty()) {
-                tmp.add(cache.get(addressInInt).poll());
-            }
-            while (!tmp.isEmpty())
-                cache.get(addressInInt).add(tmp.poll());
             details.setHits(details.getHits() + 1);
         } else {
+            System.out.println("Miss");
             details.setMisses(details.getMisses() + 1);
             publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
             cache.get(addressInInt).add(dataAddress);
             if (cache.get(addressInInt).size() > associativity) {
+                System.out.println("replaced with: " + cache.get(addressInInt).peek());
                 details.setReplace(details.getReplace() + 1);
                 if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack() + (blockSize / 4));
@@ -181,37 +188,46 @@ public class CacheSimulator {
             }
         }
         details.setAccesses(details.getAccesses() + 1);
+        return counter;
     }
 
-    public static void writeBack(String dataAddress, ArrayList<Queue<String>> cache, int cacheSetsCount, int associativity, Boolean allocateOrNoAllocate, int blockSize, ArrayList<String> dirtyBlocks, Details details, PublicDetails publicDetails) {
+    public static int writeBack(String dataAddress, ArrayList<Queue<String>> cache, int cacheSetsCount, int associativity, Boolean allocateOrNoAllocate, int blockSize, ArrayList<String> dirtyBlocks, Details details, PublicDetails publicDetails, int counter) {
+        counter++;
         int addressInInt = Integer.parseInt(dataAddress, 16);
         addressInInt = addressInInt / blockSize;
         dataAddress = "" + addressInInt;
         addressInInt = addressInInt % cacheSetsCount;
+        System.out.println(counter + ".write: " + dataAddress + "/" + addressInInt);
         if (cache.get(addressInInt).contains(dataAddress)) {
+            System.out.println("Hit");
             if (!dirtyBlocks.contains(dataAddress))
                 dirtyBlocks.add(dataAddress);
             details.setHits(details.getHits() + 1);
         }
         if (allocateOrNoAllocate) {
             if (cache.get(addressInInt).contains(dataAddress)) {
-                Queue<String> tmp = new PriorityQueue<>();
-                while (!cache.get(addressInInt).peek().equals(dataAddress)) {
-                    tmp.add(cache.get(addressInInt).poll());
+                if (associativity != 1) {
+                    Queue<String> tmp = new PriorityQueue<>();
+                    while (!cache.get(addressInInt).peek().equals(dataAddress)) {
+                        tmp.add(cache.get(addressInInt).poll());
+                    }
+                    cache.get(addressInInt).remove();
+                    while (!cache.get(addressInInt).isEmpty()) {
+                        tmp.add(cache.get(addressInInt).poll());
+                    }
+                    while (!tmp.isEmpty())
+                        cache.get(addressInInt).add(tmp.poll());
                 }
-                cache.get(addressInInt).remove();
-                while (!cache.get(addressInInt).isEmpty()) {
-                    tmp.add(cache.get(addressInInt).poll());
-                }
-                while (!tmp.isEmpty())
-                    cache.get(addressInInt).add(tmp.poll());
             } else {
+                System.out.println("Miss");
                 details.setMisses(details.getMisses() + 1);
                 publicDetails.setDemandFetch(publicDetails.getDemandFetch() + 1);
-                dirtyBlocks.add(dataAddress);
+                if (!dirtyBlocks.contains(dataAddress))
+                    dirtyBlocks.add(dataAddress);
             }
             cache.get(addressInInt).add(dataAddress);
             if (cache.get(addressInInt).size() > associativity) {
+                System.out.println("replaced with: " + cache.get(addressInInt).peek());
                 details.setReplace(details.getReplace() + 1);
                 if (dirtyBlocks.contains(cache.get(addressInInt).peek())) {
                     publicDetails.setCopiesBack(publicDetails.getCopiesBack() + (blockSize / 4));
@@ -226,7 +242,7 @@ public class CacheSimulator {
             }
         }
         details.setAccesses(details.getAccesses() + 1);
-
+        return counter;
     }
 
     public static void emptyCache(ArrayList<Queue<String>> cache, ArrayList<String> dirtyBlocks, PublicDetails publicDetails, int blockSize) {
